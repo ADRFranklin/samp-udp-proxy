@@ -1,0 +1,8 @@
+[package]
+name = "samp-udp-proxy"
+version = "1.0.0"
+authors = ["Arron (Michael) Franklin"]
+
+[dependencies]
+toml = "0.4.2"
+serde = { version = "1.0", features = ["derive"] }

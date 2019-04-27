@@ -75,61 +75,45 @@ impl Proxy {
                     let mut writer = Cursor::new(vec![]);
                     let query = Query::new(packet.clone());
 
-                    match packet.data[0] as char {
+                    let send = match packet.data[0] as char {
                         'i' => {
                             query.get_info(&server, &mut writer);
-
-                            match socket.send_to(&writer.into_inner(), src) {
-                                Ok(_) => (),
-                                Err(e) => println!("Failed to send packet: {}", e),
-                            }
+                            true
                         }
-
                         'r' => {
                             query.get_rules(&server, &mut writer);
-
-                            let result = writer.into_inner();
-                            match socket.send_to(&result, src) {
-                                Ok(_) => (),
-                                Err(e) => println!("Failed to send packet: {}", e),
-                            }
+                            true
                         }
-
                         'c' => {
                             query.get_players(&server, &mut writer);
-
-                            let result = writer.into_inner();
-                            match socket.send_to(&result, src) {
-                                Ok(_) => (),
-                                Err(e) => println!("Failed to send packet: {}", e),
-                            }
+                            true
                         }
-
                         'd' => {
                             query.get_player_details(&server, &mut writer);
-
-                            let result = writer.into_inner();
-                            match socket.send_to(&result, src) {
-                                Ok(_) => (),
-                                Err(e) => println!("Failed to send packet: {}", e),
-                            }
+                            true
                         }
-
                         'p' => {
                             query.get_ping(&mut writer);
-
-                            let result = writer.into_inner();
-                            match socket.send_to(&result, src) {
-                                Ok(_) => (),
-                                Err(e) => println!("Failed to send packet: {}", e),
-                            }
+                            true
                         }
+                        _ => {
+                            println!("unexpected query type {}", packet.data[0] as char);
+                            false
+                        }
+                    };
 
-                        _ => (),
+                    if send {
+                        match socket.send_to(&writer.into_inner(), src) {
+                            Ok(_) => (),
+                            Err(e) => println!("failed to send packet: {}", e),
+                        }
+                    }
+                } else {
+                    match socket.send_to(&buf, src) {
+                        Ok(_) => (),
+                        Err(e) => println!("failed to forward packet: {}", e),
                     };
                 }
-
-                //println!("{:?}", packet);
             }
         });
 

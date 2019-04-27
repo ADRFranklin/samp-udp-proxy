@@ -31,8 +31,8 @@ extern crate rand;
 // --
 
 pub use samp_udp_proxy::config::Config;
-pub use samp_udp_proxy::server::Server;
 pub use samp_udp_proxy::proxy::Proxy;
+pub use samp_udp_proxy::server::Server;
 
 // --
 //  Main
@@ -50,6 +50,6 @@ pub fn main() {
     // Create a new instance of proxy from config
     let proxy = Proxy::new(config.frontend);
 
-    // Start the proxy 
+    // Start the proxy
     proxy.start(server);
 }

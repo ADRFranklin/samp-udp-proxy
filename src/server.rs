@@ -71,7 +71,15 @@ impl Server {
 }
 
 impl Cache {
-    pub fn new(hostname: String, password: u8, max_players: u16, players: Vec<Player>, gamemode: String, language: String, rules: Vec<Rule>) -> Cache {
+    pub fn new(
+        hostname: String,
+        password: u8,
+        max_players: u16,
+        players: Vec<Player>,
+        gamemode: String,
+        language: String,
+        rules: Vec<Rule>,
+    ) -> Cache {
         return Cache {
             hostname: hostname,
             password: password,
@@ -80,7 +88,7 @@ impl Cache {
             gamemode: gamemode,
             language: language,
             rules: rules,
-        }
+        };
     }
 }
 
@@ -93,8 +101,8 @@ impl Default for Cache {
             players: vec![],
             gamemode: "Unknown Gamemode".to_string(),
             language: "Unknown Language".to_string(),
-            rules: vec![],            
-        }
+            rules: vec![],
+        };
     }
 }
 
@@ -104,7 +112,7 @@ impl Player {
             name: name,
             score: score,
             ping: ping,
-        }
+        };
     }
 }
 
@@ -113,6 +121,6 @@ impl Rule {
         return Rule {
             name: name,
             value: value,
-        }
+        };
     }
 }

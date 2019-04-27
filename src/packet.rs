@@ -53,4 +53,3 @@ impl Packet {
         return false;
     }
 }
-

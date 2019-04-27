@@ -20,32 +20,36 @@
 */
 
 // --
-//  Libraries (What libraries?)
+//  Crates
 // --
 
-#[macro_use]
+extern crate byteorder; // 1.3.1
+extern crate rand;
 
 // --
-//  Modules (the modules)
+//  Libs
 // --
 
-mod config;
-mod servers;
+pub use samp_udp_proxy::config::Config;
+pub use samp_udp_proxy::server::Server;
+pub use samp_udp_proxy::proxy::Proxy;
 
 // --
-//  Main (the main function)
+//  Main
 // --
 
 pub fn main() {
-    let path = "config.toml".to_string();
+    let config: String = "config.toml".to_string();
 
-    // Load Config
-    let config = config::parse(path);
+    // Parse Config
+    let config = Config::parse(config).unwrap();
 
-    // Add config servers as a server instance
-    for cserver in config.servers {
-        if cserver.name && cserver.ip && cserver.port {
-            servers::Servers::new(cserver.name, cserver.ip, cserver.port);
-        }
-    }
+    // Create new instance of server from config
+    let server = Server::new(config.backend);
+
+    // Create a new instance of proxy from config
+    let proxy = Proxy::new(config.frontend);
+
+    // Start the proxy 
+    proxy.start(server);
 }

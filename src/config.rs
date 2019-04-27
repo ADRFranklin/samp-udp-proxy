@@ -35,43 +35,44 @@ use std::io::Read;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    pub proxy: Proxy,
-    pub servers: Vec<Servers>,
+    pub frontend: Frontend,
+    pub backend: Backend,
 }
 
 #[derive(Deserialize, Debug)]
-struct Proxy {
-    ip: String,
-    port: Option<u16>,
+pub struct Frontend {
+    pub ip: String,
+    pub port: u16,
 }
 
 #[derive(Deserialize, Debug)]
-struct Servers {
-    name: String,
-    ip: String,
-    port: Option<u16>,
+pub struct Backend {
+    pub ip: String,
+    pub port: u16,
 }
 
 // --
 //  Load Config
 // --
 
-pub fn parse(path: String) -> Result<Config, Box<dyn error::Error>> {
-    let mut config_path = match File::open(path) {
-        Ok(file) => file,
-        Err(e) => panic!("Failed to load the config file. {}", e),
-    };
+impl Config {
+    pub fn parse(path: String) -> Result<Config, Box<dyn error::Error>> {
+        let mut config_path = match File::open(path) {
+            Ok(file) => file,
+            Err(e) => panic!("Failed to load the config file. {}", e),
+        };
 
-    let mut contents = String::new();
-    match config_path.read_to_string(&mut contents) {
-        Ok(c) => c,
-        Err(e) => panic!("Failed to read config file. {}", e),
-    };
+        let mut contents = String::new();
+        match config_path.read_to_string(&mut contents) {
+            Ok(c) => c,
+            Err(e) => panic!("Failed to read config file. {}", e),
+        };
 
-    let config: Config = match toml::from_str(&contents) {
-        Ok(c) => c,
-        Err(e) => panic!("Failed to parse config file. {}", e),
-    };
+        let config: Config = match toml::from_str(&contents) {
+            Ok(c) => c,
+            Err(e) => panic!("Failed to parse config file. {}", e),
+        };
 
-    return Ok(config);
+        return Ok(config);
+    }
 }

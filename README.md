@@ -1,4 +1,4 @@
-[WIP] - Work in Progress
+##[WIP] - Work in Progress
 
 # samp-udp-proxy 
 
@@ -18,6 +18,6 @@ The idea of this application is to provide a proxy inbetween the clients and a S
 
 ## Kind Thanks
 
-* Southclaws - Helping me understanding Rust and guiding me
+* Southclaws - Helping me understand Rust and guiding me through the tough parts
 * J0sh - For keeping me up all night to work on it
-* Marcel - For trying to write powershell scripts and stealing my personal data -_-
+* Marcel - For trying to write powershell scripts and steal my personal data -_-

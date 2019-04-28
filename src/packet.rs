@@ -47,10 +47,6 @@ impl Packet {
     }
 
     pub fn is_query_packet(&self) -> bool {
-        if self.id == 1396788560 {
-            return true;
-        }
-        return false;
+        self.id == 1396788560
     }
 }
-

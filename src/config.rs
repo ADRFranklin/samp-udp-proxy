@@ -57,22 +57,8 @@ pub struct Backend {
 
 impl Config {
     pub fn parse(path: String) -> Result<Config, Box<dyn error::Error>> {
-        let mut config_path = match File::open(path) {
-            Ok(file) => file,
-            Err(e) => panic!("Failed to load the config file. {}", e),
-        };
-
         let mut contents = String::new();
-        match config_path.read_to_string(&mut contents) {
-            Ok(c) => c,
-            Err(e) => panic!("Failed to read config file. {}", e),
-        };
-
-        let config: Config = match toml::from_str(&contents) {
-            Ok(c) => c,
-            Err(e) => panic!("Failed to parse config file. {}", e),
-        };
-
-        return Ok(config);
+        File::open(path)?.read_to_string(&mut contents)?;
+        return Ok(toml::from_str(&contents)?);
     }
 }

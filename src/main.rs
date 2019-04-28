@@ -31,25 +31,16 @@ extern crate rand;
 // --
 
 pub use samp_udp_proxy::config::Config;
-pub use samp_udp_proxy::server::Server;
 pub use samp_udp_proxy::proxy::Proxy;
+pub use samp_udp_proxy::server::Server;
 
 // --
 //  Main
 // --
 
+const CONFIG: &str = "config.toml";
+
 pub fn main() {
-    let config: String = "config.toml".to_string();
-
-    // Parse Config
-    let config = Config::parse(config).unwrap();
-
-    // Create new instance of server from config
-    let server = Server::new(config.backend);
-
-    // Create a new instance of proxy from config
-    let proxy = Proxy::new(config.frontend);
-
-    // Start the proxy 
-    proxy.start(server);
+    let config = Config::parse(CONFIG.into()).unwrap();
+    Proxy::new(config.frontend).start(Server::new(config.backend));
 }

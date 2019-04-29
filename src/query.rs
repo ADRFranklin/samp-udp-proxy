@@ -30,61 +30,57 @@ pub use crate::server::{Cache, Player, Rule, Server};
 // --
 
 pub struct Query {
-    id: u32,
-    ip: u32,
-    port: u16,
-    opcode: u8,
-    packet: Packet,
+    pub packet: Packet,
+    pub cache: Cache,
 }
 
 impl Query {
-    pub fn new(packet: Packet) -> Query {
+    pub fn new(packet: Packet, cache: Cache) -> Query {
         return Query {
-            id: packet.id,
-            ip: packet.ip,
-            port: packet.port,
-            opcode: packet.data[0],
             packet: packet,
+            cache: cache,
         };
     }
 
-    pub fn get_info(&self, server: &Server, writer: &mut std::io::Cursor<Vec<u8>>) {
-        writer.write_u32::<BigEndian>(self.id).expect("");
-        writer.write_u32::<BigEndian>(self.ip).expect("");
-        writer.write_u16::<BigEndian>(self.port).expect("");
-        writer.write_u8(self.opcode).expect("");
-
-        writer.write_u8(server.cache.password).expect("");
-        writer
-            .write_u16::<LittleEndian>((server.cache.players).len() as u16)
-            .expect("");
-        writer
-            .write_u16::<LittleEndian>(server.cache.max_players)
-            .expect("");
-        writer
-            .write_u32::<LittleEndian>(server.cache.hostname.len() as u32)
-            .expect("");
-        writer.write(server.cache.hostname.as_bytes()).expect("");
-        writer
-            .write_u32::<LittleEndian>(server.cache.gamemode.len() as u32)
-            .expect("");
-        writer.write(server.cache.gamemode.as_bytes()).expect("");
-        writer
-            .write_u32::<LittleEndian>(server.cache.language.len() as u32)
-            .expect("");
-        writer.write(server.cache.language.as_bytes()).expect("");
+    pub fn write_query_data(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        writer.write_u32::<BigEndian>(1396788560 as u32).expect("");
+        writer.write_u32::<BigEndian>(self.packet.ip).expect("");
+        writer.write_u16::<BigEndian>(self.packet.port).expect("");
+        writer.write_u8(self.packet.data[0]).expect("");
     }
 
-    pub fn get_rules(&self, server: &Server, writer: &mut std::io::Cursor<Vec<u8>>) {
-        writer.write_u32::<BigEndian>(self.id).expect("");
-        writer.write_u32::<BigEndian>(self.ip).expect("");
-        writer.write_u16::<BigEndian>(self.port).expect("");
-        writer.write_u8(self.opcode).expect("");
+    pub fn send_information(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        self.write_query_data(writer);
+
+        writer.write_u8(self.cache.password).expect("");
+        writer
+            .write_u16::<LittleEndian>((self.cache.players).len() as u16)
+            .expect("");
+        writer
+            .write_u16::<LittleEndian>(self.cache.max_players)
+            .expect("");
+        writer
+            .write_u32::<LittleEndian>(self.cache.hostname.len() as u32)
+            .expect("");
+        writer.write(self.cache.hostname.as_bytes()).expect("");
+        writer
+            .write_u32::<LittleEndian>(self.cache.gamemode.len() as u32)
+            .expect("");
+        writer.write(self.cache.gamemode.as_bytes()).expect("");
+        writer
+            .write_u32::<LittleEndian>(self.cache.language.len() as u32)
+            .expect("");
+        writer.write(self.cache.language.as_bytes()).expect("");
+    }
+
+    pub fn send_rules(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        self.write_query_data(writer);
 
         writer
-            .write_u16::<LittleEndian>(server.cache.rules.len() as u16)
+            .write_u16::<LittleEndian>(self.cache.rules.len() as u16)
             .expect("");
-        for rule in server.cache.rules.iter() {
+
+        for rule in self.cache.rules.iter() {
             writer.write_u8(rule.name.len() as u8).expect("");
             writer.write(rule.name.as_bytes()).expect("");
             writer.write_u8(rule.value.len() as u8).expect("");
@@ -92,16 +88,14 @@ impl Query {
         }
     }
 
-    pub fn get_players(&self, server: &Server, writer: &mut std::io::Cursor<Vec<u8>>) {
-        writer.write_u32::<BigEndian>(self.id).expect("");
-        writer.write_u32::<BigEndian>(self.ip).expect("");
-        writer.write_u16::<BigEndian>(self.port).expect("");
-        writer.write_u8(self.opcode).expect("");
+    pub fn send_players(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        self.write_query_data(writer);
 
         writer
-            .write_u16::<LittleEndian>(server.cache.players.len() as u16)
+            .write_u16::<LittleEndian>(self.cache.players.len() as u16)
             .expect("");
-        for player in server.cache.players.iter() {
+
+        for player in self.cache.players.iter() {
             writer.write_u8(player.name.len() as u8).expect("");
             writer.write(player.name.as_bytes()).expect("");
             writer.write_u8(player.score as u8).expect("");
@@ -109,16 +103,13 @@ impl Query {
         }
     }
 
-    pub fn get_player_details(&self, server: &Server, writer: &mut std::io::Cursor<Vec<u8>>) {
-        writer.write_u32::<BigEndian>(self.id).expect("");
-        writer.write_u32::<BigEndian>(self.ip).expect("");
-        writer.write_u16::<BigEndian>(self.port).expect("");
-        writer.write_u8(self.opcode).expect("");
+    pub fn send_detailed_players(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        self.write_query_data(writer);
 
         writer
-            .write_u16::<LittleEndian>(server.cache.players.len() as u16)
+            .write_u16::<LittleEndian>(self.cache.players.len() as u16)
             .expect("");
-        for player in server.cache.players.iter() {
+        for player in self.cache.players.iter() {
             writer.write_u8(player.name.len() as u8).expect("");
             writer.write(player.name.as_bytes()).expect("");
             writer.write_u8(player.score as u8).expect("");
@@ -127,11 +118,8 @@ impl Query {
         }
     }
 
-    pub fn get_ping(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
-        writer.write_u32::<BigEndian>(self.id).expect("");
-        writer.write_u32::<BigEndian>(self.ip).expect("");
-        writer.write_u16::<BigEndian>(self.port).expect("");
-        writer.write_u8(self.opcode).expect("");
+    pub fn send_ping(&self, writer: &mut std::io::Cursor<Vec<u8>>) {
+        self.write_query_data(writer);
 
         writer.write_u8(self.packet.data[1]).expect("");
         writer.write_u8(self.packet.data[2]).expect("");

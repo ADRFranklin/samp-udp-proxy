@@ -20,19 +20,11 @@
 */
 
 // --
-//  Crates
-// --
-
-extern crate byteorder; // 1.3.1
-extern crate rand;
-
-// --
 //  Libs
 // --
 
 pub use samp_udp_proxy::config::Config;
-pub use samp_udp_proxy::proxy::Proxy;
-pub use samp_udp_proxy::server::Server;
+pub use samp_udp_proxy::proxy::{run, Proxy};
 
 // --
 //  Main
@@ -42,5 +34,5 @@ const CONFIG: &str = "config.toml";
 
 pub fn main() {
     let config = Config::parse(CONFIG.into()).unwrap();
-    Proxy::new(config.frontend).start(Server::new(config.backend));
+    run(Proxy::new(config));
 }

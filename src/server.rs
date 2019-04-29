@@ -6,7 +6,7 @@
                         |_|     |_|                  |___/
 
     @Author         Arron (Michael) Franklin
-    @File           servers.rs
+    @File           server.rs
     @Project        SA-MP Proxy
     @Created        20th March 2019
     @Weburl         https://sanandreasgaming.com
@@ -36,7 +36,7 @@ pub struct Server {
     pub cache: Cache,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Cache {
     pub hostname: String,
     pub password: u8,
@@ -47,14 +47,14 @@ pub struct Cache {
     pub rules: Vec<Rule>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Player {
     pub name: String,
     pub score: u32,
     pub ping: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Rule {
     pub name: String,
     pub value: String,

@@ -6,7 +6,7 @@
                         |_|     |_|                  |___/
 
     @Author         Arron (Michael) Franklin
-    @File           lib.rs
+    @File           client.rs
     @Project        SA-MP Proxy
     @Created        20th March 2019
     @Weburl         https://sanandreasgaming.com
@@ -19,11 +19,8 @@
     https://github.com/ADRFranklin/samp-udp-proxy/blob/master/LICENSE
 */
 
-extern crate byteorder;
-
-pub mod client;
-pub mod config;
-pub mod packet;
-pub mod proxy;
-pub mod query;
-pub mod server;
+#[derive(Debug)]
+pub struct Client {
+    pub ip: String,
+    pub port: u16,
+}

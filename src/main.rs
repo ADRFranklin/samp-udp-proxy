@@ -25,6 +25,7 @@
 
 pub use samp_udp_proxy::config::Config;
 pub use samp_udp_proxy::proxy::{run, Proxy};
+pub use samp_udp_proxy::server::Server;
 
 // --
 //  Main

@@ -23,6 +23,14 @@
 //  Modules
 // --
 
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::io::Cursor;
+use std::io::Write;
+use std::net::UdpSocket;
+use std::sync::mpsc::channel;
+use std::thread;
+use std::time::Duration;
+
 pub use crate::config::Backend;
 
 // --
@@ -67,6 +75,26 @@ impl Server {
             port: config.port,
             cache: Cache::default(),
         };
+    }
+
+    pub fn write_query_header(&self) -> Cursor<Vec<u8>> {
+        let mut writer = Cursor::new(vec![]);
+        writer.write("SAMP".as_bytes()).unwrap();
+        writer.write(self.ip.as_bytes()).unwrap();
+        writer.write_u16::<LittleEndian>(self.port).unwrap();
+        writer
+    }
+
+    pub fn get_info(&self, writer: &mut Cursor<Vec<u8>>) {
+        writer.write_u8("i".as_bytes()[0]).unwrap();
+    }
+
+    pub fn get_rules(&self, writer: &mut Cursor<Vec<u8>>) {
+        writer.write_u8("r".as_bytes()[0]).unwrap();
+    }
+
+    pub fn get_players(&self, writer: &mut Cursor<Vec<u8>>) {
+        writer.write_u8("d".as_bytes()[0]).unwrap();
     }
 }
 

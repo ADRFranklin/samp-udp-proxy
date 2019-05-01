@@ -20,10 +20,10 @@
 */
 
 extern crate byteorder;
+extern crate rand;
 
 pub mod client;
 pub mod config;
-pub mod packet;
 pub mod proxy;
 pub mod query;
 pub mod server;

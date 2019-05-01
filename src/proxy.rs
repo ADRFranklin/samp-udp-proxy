@@ -23,14 +23,17 @@
 //  Modules
 // --
 
-use std::io::Cursor;
+use std::collections::HashMap;
 use std::net::UdpSocket;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::channel;
+use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 pub use crate::client::Client;
 pub use crate::config::{Backend, Config, Frontend};
-pub use crate::packet::Packet;
-pub use crate::query::Query;
+pub use crate::query::*;
 pub use crate::server::{Cache, Server};
 
 // --
@@ -51,7 +54,6 @@ pub struct ProxyServer {
 #[derive(Debug)]
 pub struct ProxyClient {
     pub config: Frontend,
-    pub clients: Vec<Client>,
 }
 
 // --
@@ -75,10 +77,7 @@ impl ProxyServer {
 
 impl ProxyClient {
     fn new(config: Frontend) -> ProxyClient {
-        return ProxyClient {
-            config,
-            clients: vec![],
-        };
+        return ProxyClient { config };
     }
 }
 
@@ -90,66 +89,161 @@ pub fn bind(addr: &str) -> UdpSocket {
 }
 
 pub fn run(proxy: Proxy) {
-    let socket = self::bind(&format!(
-        "{}:{}",
-        proxy.client.config.ip, proxy.client.config.port
-    ));
+    let local_addr = format!("{}:{}", proxy.client.config.ip, proxy.client.config.port);
+    let local = self::bind(&local_addr);
+    let remote_addr = format!("{}:{}", proxy.server.config.ip, proxy.server.config.port);
     let server = Server::new(proxy.server.config);
+    let cache = server.cache.clone();
 
-    // client
-    let thread = thread::spawn(move || {
-        let mut buf = [0; 512];
-        loop {
-            let src = match socket.recv_from(&mut buf) {
-                Ok((_, src)) => src,
-                Err(e) => {
-                    println!("couldn't recieve a datagram: {}", e);
-                    continue;
+    let responder = local.try_clone().expect(&format!(
+        "Failed to clone local socket binding {}",
+        local_addr
+    ));
+
+    let (main_sender, main_receiver) = channel::<(_, Vec<u8>)>();
+    thread::spawn(move || loop {
+        let (dest, buf) = main_receiver.recv().unwrap();
+        let to_send = buf.as_slice();
+        responder
+            .send_to(to_send, dest)
+            .expect(&format!("Failed to forward from server to client {}", dest));
+    });
+
+    let mut client_map = HashMap::new();
+    let mut buf = [0; 64 * 1024];
+    loop {
+        let (num_bytes, src_addr) = local.recv_from(&mut buf).expect("No data recieved");
+
+        // Query data
+        let packet = parse_query_packet(&mut buf);
+        if is_query_packet(packet.id) {
+            let mut writer = write_query_header(packet.clone());
+
+            let send = match packet.opcode as char {
+                'i' => {
+                    send_information(&mut writer, &cache);
+                    true
                 }
+                'r' => {
+                    send_rules(&mut writer, &cache);
+                    true
+                }
+                'c' => {
+                    send_players(&mut writer, &cache);
+                    true
+                }
+                'd' => {
+                    send_detailed_players(&mut writer, &cache);
+                    true
+                }
+                'p' => {
+                    send_ping(&mut writer, packet);
+                    true
+                }
+                _ => false,
             };
 
-            // Client
-            let data: &[u8] = &buf;
-            let packet = Packet::new(&mut Cursor::new(data));
+            if send == true {
+                local
+                    .send_to(&writer.into_inner(), &src_addr)
+                    .expect("Failed to send query data");
+            }
+            continue;
+        }
 
-            // Is Client
-            if packet.is_query_packet() {
-                let query = Query::new(packet.clone(), server.cache.clone());
-                let mut writer = Cursor::new(vec![]);
+        let mut remove_existing = false;
+        loop {
+            let mut ignore_failure = true;
+            let client_id = format!("{}", src_addr);
 
-                let send = match packet.data[0] as char {
-                    'i' => {
-                        query.send_information(&mut writer);
-                        true
-                    }
-                    'r' => {
-                        query.send_rules(&mut writer);
-                        true
-                    }
-                    'c' => {
-                        query.send_players(&mut writer);
-                        true
-                    }
-                    'd' => {
-                        query.send_detailed_players(&mut writer);
-                        true
-                    }
-                    'p' => {
-                        query.send_ping(&mut writer);
-                        true
-                    }
-                    _ => false,
-                };
+            if remove_existing {
+                client_map.remove(&client_id);
+            }
 
-                if send {
-                    match socket.send_to(&writer.into_inner(), src) {
-                        Ok(_) => (),
-                        Err(e) => println!("failed to send packet: {}", e),
+            let sender = client_map.entry(client_id.clone()).or_insert_with(|| {
+                ignore_failure = false;
+
+                let local_send_queue = main_sender.clone();
+                let (sender, reciever) = channel::<Vec<u8>>();
+                let remote_addr_copy = remote_addr.clone();
+
+                thread::spawn(move || {
+                    let temp_outgoing_addr = format!("0.0.0.0:0");
+                    let upstream_send = UdpSocket::bind(&temp_outgoing_addr).expect(&format!(
+                        "Failed to bind to transient address {}",
+                        &temp_outgoing_addr
+                    ));
+                    let upstream_recv = upstream_send
+                        .try_clone()
+                        .expect("Failed to clone client connection");
+
+                    let mut timeouts: u64 = 0;
+                    let timed_out = Arc::new(AtomicBool::new(false));
+
+                    let local_timed_out = timed_out.clone();
+                    thread::spawn(move || {
+                        let mut from_upstream = [0; 64 * 1024];
+                        upstream_recv
+                            .set_read_timeout(Some(Duration::from_millis((3 * 60 * 100) + 100)))
+                            .unwrap();
+                        loop {
+                            match upstream_recv.recv_from(&mut from_upstream) {
+                                Ok((bytes_rcvd, _)) => {
+                                    let to_send = from_upstream[..bytes_rcvd].to_vec();
+                                    local_send_queue
+                                        .send((src_addr, to_send))
+                                        .expect("Failed to queue response from upstream");
+                                }
+                                Err(_) => {
+                                    if local_timed_out.load(Ordering::Relaxed) {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Sending data from client to server
+                    loop {
+                        match reciever.recv_timeout(Duration::from_millis(3 * 60 * 100)) {
+                            Ok(from_client) => {
+                                upstream_send
+                                    .send_to(from_client.as_slice(), &remote_addr_copy)
+                                    .expect(&format!(
+                                        "Failed to forward packet from client {} to server!",
+                                        src_addr
+                                    ));
+                                timeouts = 0;
+                            }
+                            Err(_) => {
+                                timeouts += 1;
+                                if timeouts >= 10 {
+                                    timed_out.store(true, Ordering::Relaxed);
+                                    break;
+                                }
+                            }
+                        }
                     }
+                });
+                sender
+            });
+
+            let to_send = buf[..num_bytes].to_vec();
+            match sender.send(to_send) {
+                Ok(_) => {
+                    break;
+                }
+                Err(_) => {
+                    if !ignore_failure {
+                        panic!(
+                            "Failed to send message to datagram forwarder for client {}",
+                            client_id
+                        );
+                    }
+                    remove_existing = true;
+                    continue;
                 }
             }
         }
-    });
-
-    thread.join().expect("Client thread has panicked");
+    }
 }

@@ -19,46 +19,34 @@
     https://github.com/ADRFranklin/samp-udp-proxy/blob/master/LICENSE
 */
 
-// crates
-extern crate serde;
-extern crate toml;
-
 // libs
-use self::serde::*;
-use std::error;
+use serde::Deserialize;
+use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 
-// --
-//  Structs
-// --
-
 #[derive(Deserialize, Debug)]
 pub struct Config {
-    pub frontend: Frontend,
-    pub backend: Backend,
+    pub proxy: Proxy,
+    pub servers: Servers,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Frontend {
+pub struct Proxy {
     pub ip: String,
     pub port: u16,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Backend {
+pub struct Servers {
     pub ip: String,
     pub port: u16,
 }
-
-// --
-//  Load Config
-// --
 
 impl Config {
-    pub fn parse(path: String) -> Result<Config, Box<dyn error::Error>> {
+    pub fn parse(path: String) -> Result<Config, Box<dyn Error>> {
         let mut contents = String::new();
         File::open(path)?.read_to_string(&mut contents)?;
-        return Ok(toml::from_str(&contents)?);
+        Ok(toml::from_str(&contents)?)
     }
 }

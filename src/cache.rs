@@ -19,3 +19,38 @@
     https://github.com/ADRFranklin/samp-udp-proxy/blob/master/LICENSE
 */
 
+pub struct Cache {
+    pub hostname: String,
+    pub current_players: i32,
+    pub max_players: i32,
+    pub mode: String,
+    pub language: String,
+    pub passworded: bool,
+    pub rules: Vec<Rule>,
+    pub players: Vec<Player>,
+}
+
+pub struct Rule {
+    pub name: String,
+    pub value: String,
+}
+
+pub struct Player {
+    pub name: String,
+    pub score: i32,
+}
+
+impl Default for Cache {
+    fn default() -> Cache {
+        Cache {
+            hostname: "Proxy Server".to_string(),
+            current_players: 0,
+            max_players: 0,
+            mode: "v1.2.3".to_string(),
+            language: "English".to_string(),
+            passworded: false,
+            rules: vec![],
+            players: vec![],
+        }
+    }
+}

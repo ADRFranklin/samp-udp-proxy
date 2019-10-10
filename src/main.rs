@@ -6,7 +6,7 @@
                         |_|     |_|                  |___/
 
     @Author         Arron (Michael) Franklin
-    @File           main.rs
+    @File           lib.rs
     @Project        SA-MP Proxy
     @Created        20th March 2019
     @Weburl         https://sanandreasgaming.com
@@ -15,25 +15,43 @@
     - README -
     https://github.com/ADRFranklin/samp-udp-proxy/blob/master/README.md
 
-    - LICENSE -
+    - LICENCE -
     https://github.com/ADRFranklin/samp-udp-proxy/blob/master/LICENSE
 */
 
-// --
-//  Libs
-// --
+extern crate byteorder;
 
-pub use samp_udp_proxy::config::Config;
-pub use samp_udp_proxy::proxy::{run, Proxy};
-pub use samp_udp_proxy::server::Server;
+mod config;
+mod eventloop;
+mod packet;
+mod proxy;
+mod query;
 
-// --
-//  Main
-// --
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
+
+use crate::config::Config;
+use crate::packet::Packet;
+use crate::proxy::Proxy;
 
 const CONFIG: &str = "config.toml";
+const THREAD_COUNT: u32 = 4;
 
 pub fn main() {
-    let config = Config::parse(CONFIG.into()).unwrap();
-    run(Proxy::new(config));
+    let config = match Config::parse(CONFIG.into()) {
+        Ok(c) => c,
+        Err(e) => {
+            panic!("Failed to parse the config file: {}", e);
+        }
+    };
+
+    let address = &format!("{}:{}", config.proxy.ip, config.proxy.port);
+    start(address, THREAD_COUNT);
+}
+
+pub fn start(address: &str, threads: u32) {
+    let (sender, receiver): (Sender<Packet>, Receiver<Packet>) = mpsc::channel();
+    let proxy = Proxy::new(address, threads, sender);
+    let _ = proxy.spawn_threads();
+    eventloop::run(proxy, receiver);
 }
